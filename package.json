@@ -1,7 +1,9 @@
 {
-  "name": "react-fetching-library",
-  "private": true,
-  "version": "0.0.0",
+  "name": "rfl-js",
+  "private": false,
+  "version": "0.0.1",
+  "repository": "https://github.com/hanghae-team6/react-fetching-library",
+  "main": "index.ts",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -38,5 +40,6 @@
     "typescript": "^5.2.2",
     "vite": "^5.2.0",
     "vitest": "^1.5.0"
-  }
+  },
+  "license": "MIT"
 }
