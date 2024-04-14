@@ -11,7 +11,12 @@ module.exports = {
     'plugin:react-hooks/recommended',
     'plugin:prettier/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', 'vite.config.ts'], // 설정파일들이나 배포된 파일은 린트룰 적용 x
+  ignorePatterns: [
+    'dist',
+    '.eslintrc.cjs',
+    'vite.config.ts',
+    'vitest.config.ts',
+  ], // 설정파일들이나 배포된 파일은 린트룰 적용 x
   // 타입스크립트를 사용할 때, parser를 명시적으로 지정해줘야함.
   parser: '@typescript-eslint/parser',
   parserOptions: {
