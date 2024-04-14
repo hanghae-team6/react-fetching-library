@@ -36,8 +36,7 @@ module.exports = {
       { allowConstantExport: true },
     ],
     '@tanstack/query/exhaustive-deps': 'error',
-    '@tanstack/query/no-deprecated-options': 'error',
-    '@tanstack/query/prefer-query-object-syntax': 'error',
+    '@tanstack/query/no-rest-destructuring': 'warn',
     '@tanstack/query/stable-query-client': 'error',
   },
   // eslint-plugin-react를 사용할 때는, react 버전을 명시적으로 지정해줘야함.
