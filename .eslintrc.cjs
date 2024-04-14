@@ -10,6 +10,7 @@ module.exports = {
     'plugin:react/jsx-runtime',
     'plugin:react-hooks/recommended',
     'plugin:prettier/recommended',
+    'plugin:@tanstack/eslint-plugin-query/recommended',
   ],
   ignorePatterns: [
     'dist',
@@ -27,13 +28,17 @@ module.exports = {
     project: ['./tsconfig.json'],
   },
   // 플러그인 추가 (타입스크립트 관련, 핫리로딩 관련 플러그인)
-  plugins: ['@typescript-eslint', 'react-refresh'],
+  plugins: ['@typescript-eslint', 'react-refresh', '@tanstack/query'],
   rules: {
     'react/jsx-no-target-blank': 'off',
     'react-refresh/only-export-components': [
       'warn',
       { allowConstantExport: true },
     ],
+    '@tanstack/query/exhaustive-deps': 'error',
+    '@tanstack/query/no-deprecated-options': 'error',
+    '@tanstack/query/prefer-query-object-syntax': 'error',
+    '@tanstack/query/stable-query-client': 'error',
   },
   // eslint-plugin-react를 사용할 때는, react 버전을 명시적으로 지정해줘야함.
   settings: {
