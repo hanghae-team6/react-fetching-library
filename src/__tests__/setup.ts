@@ -1,6 +1,6 @@
 import { expect, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import matchers from '@testing-library/jest-dom/matchers';
+import * as matchers from '@testing-library/jest-dom/matchers';
 
 // react-testing-library의 matcher를 확장한다.
 // `@testing-library/jest-dom`의 matcher를 사용할 수 있게 된다.
