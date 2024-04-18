@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { QueryClient, QueryCache } from '@tanstack/react-query';
 
+// const TEST_QUERY_KEY: string[] = ['user', 'user1'];
+
 describe('getQueryCache 메소드 테스트 코드', () => {
   it('getQueryCache는 객체를 반환합니다', () => {
     // QueryClient로 인스턴스를 생성하고, getQueryCache 메소드를 이용해 반환값을 받는다
