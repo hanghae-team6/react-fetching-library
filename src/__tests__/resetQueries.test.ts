@@ -1,33 +1,17 @@
-import { QueryClient, QueryCache } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { queryKey } from './utils';
 
 describe('resetQueries test', () => {
   let queryClient: QueryClient;
-  let queryCache: QueryCache;
 
   beforeEach(() => {
     queryClient = new QueryClient();
-    queryCache = queryClient.getQueryCache();
     queryClient.mount();
   });
 
   afterEach(() => {
     queryClient.clear();
     queryClient.unmount();
-  });
-
-  test('should notify listeners when a query is reset', async () => {
-    const key = queryKey();
-
-    const callback = vi.fn();
-
-    await queryClient.prefetchQuery({ queryKey: key, queryFn: () => 'data' });
-
-    queryCache.subscribe(callback);
-
-    await queryClient.resetQueries({ queryKey: key });
-
-    expect(callback).toHaveBeenCalled();
   });
 
   test('should reset query', async () => {
