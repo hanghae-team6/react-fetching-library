@@ -1,12 +1,15 @@
 import { expect, afterEach } from 'vitest';
+import { server } from './mocks/server';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
-// react-testing-library의 matcher를 확장한다.
-// `@testing-library/jest-dom`의 matcher를 사용할 수 있게 된다.
 expect.extend(matchers);
 
-// test 간 DOM 상태를 초기화
+beforeAll(() => server.listen());
+
 afterEach(() => {
+  server.resetHandlers();
   cleanup();
 });
+
+afterAll(() => server.close());
