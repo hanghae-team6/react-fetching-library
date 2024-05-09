@@ -15,17 +15,27 @@ type Query<T> = {
 const cacheStore = new Map<string, Query<unknown>>();
 
 export function useQuery<T>(params: UseQueryParam<T>) {
-  const [data, setData] = useState<T | null>(null);
-  const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { queryKey, queryFn, staleTime = 1000 } = params;
+  const queryKeyString = hashKey(queryKey);
+
+  const cachedQuery = cacheStore.get(queryKeyString) as Query<T> | undefined;
+  const isStaled = cachedQuery
+    ? Date.now() - cachedQuery.updatedAt > staleTime
+    : true;
+
+  const [data, setData] = useState<T | null>(
+    cachedQuery && !isStaled ? cachedQuery.data : null
+  );
+  const [isSuccess, setIsSuccess] = useState<boolean>(
+    cachedQuery && !isStaled ? true : false
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(
+    cachedQuery && !isStaled ? false : true
+  );
   const [isError, setIsError] = useState<boolean>(false);
   const [status, setStatus] = useState<'pending' | 'error' | 'success'>(
-    'pending'
+    cachedQuery && !isStaled ? 'success' : 'pending'
   );
-
-  const { queryKey, queryFn, staleTime = 1000 } = params;
-
-  const queryKeyString = hashKey(queryKey);
 
   const setCacheStore = useCallback(
     (data: T) => {
@@ -34,46 +44,36 @@ export function useQuery<T>(params: UseQueryParam<T>) {
     [queryKeyString]
   );
 
-  const fetchFn = useCallback(
-    function () {
-      queryFn()
-        .then(response => {
-          setData(response);
-          setIsSuccess(true);
-          setStatus('success');
-          setCacheStore(response);
-        })
-        .catch(err => {
-          console.error(err);
-          setIsError(true);
-          setStatus('error');
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    },
-    [queryFn, setCacheStore]
-  );
-
-  useEffect(() => {
+  const fetchFn = useCallback(() => {
     setIsLoading(true);
     setIsError(false);
-    setIsSuccess(false);
+    queryFn()
+      .then(response => {
+        setData(response);
+        setIsSuccess(true);
+        setStatus('success');
+        setCacheStore(response);
+      })
+      .catch(err => {
+        console.error(err);
+        setIsError(true);
+        setStatus('error');
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [queryFn, setCacheStore]);
 
-    const now = Date.now();
-
-    const cachedQuery = cacheStore.get(queryKeyString) as Query<T> | undefined;
-    const isStaled = cachedQuery
-      ? now - cachedQuery.updatedAt > staleTime
-      : false;
-
+  useEffect(() => {
     if (cachedQuery && !isStaled) {
       setData(cachedQuery.data);
+      setIsSuccess(true);
       setStatus('success');
+      setIsLoading(false);
     } else {
       fetchFn();
     }
-  }, [queryKeyString, fetchFn, staleTime]);
+  }, [queryKeyString, fetchFn, cachedQuery, isStaled]);
 
   return { data, isSuccess, isLoading, isError, status };
 }
