@@ -1,7 +1,26 @@
 import { expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react-hooks';
 import useQuery from '../hooks/useQuery';
-import { mockResponse } from './mocks/handlers';
+
+export interface ResponseType {
+  id: string;
+  content: string;
+}
+
+export const mockResponse: { [key: string]: ResponseType } = {
+  test1: {
+    id: '1',
+    content: 'test1',
+  },
+  test2: {
+    id: '2',
+    content: 'test2',
+  },
+  test3: {
+    id: '3',
+    content: 'test3',
+  },
+};
 
 const mockFetchFn = vi.fn((queryKey: string) =>
   Promise.resolve(mockResponse[queryKey])
