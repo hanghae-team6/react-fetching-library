@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 
 interface UseMutationProps<TParams, TReturn> {
   mutationFn: (params: TParams) => Promise<TReturn>;
+  onMutate?: (params: TParams) => void;
   onSuccess?: (response: unknown) => void;
   onError?: (err: Error) => void;
   onSettled?: () => void;
@@ -9,6 +10,7 @@ interface UseMutationProps<TParams, TReturn> {
 
 const useMutation = <TParams, TReturn>({
   mutationFn,
+  onMutate,
   onSuccess,
   onError,
   onSettled,
@@ -22,7 +24,7 @@ const useMutation = <TParams, TReturn>({
       setIsLoading(true);
       setData(null);
       setError(null);
-
+      onMutate && onMutate(params);
       try {
         const res = await mutationFn(params);
         setData(res);
@@ -37,7 +39,7 @@ const useMutation = <TParams, TReturn>({
         onSettled && onSettled();
       }
     },
-    [mutationFn, onError, onSettled, onSuccess]
+    [mutationFn, onMutate, onError, onSettled, onSuccess]
   );
 
   return { mutate, data, isLoading, error };
