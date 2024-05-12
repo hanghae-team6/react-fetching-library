@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from 'react';
 
 type TQueryKey = unknown[];
@@ -9,8 +10,9 @@ interface UseQueryProps<TData> {
   staleTime?: number;
 }
 
-interface Query {
+export interface Query {
   data: unknown;
+  queryFn: () => Promise<unknown>;
   updatedAt: number;
 }
 
@@ -26,40 +28,68 @@ const useQuery = <TData>({
   const [error, setError] = useState<Error | null>(null);
 
   const queryKeyString = JSON.stringify(queryKey);
-
-  const setCacheStore = useCallback(
-    (data: TData) => {
-      cacheStore.set(queryKeyString, { data, updatedAt: Date.now() });
-    },
-    [queryKeyString]
+  const cachedQueryFn = useCallback(
+    cacheStore.get(queryKeyString)?.queryFn || queryFn,
+    [queryFn, queryKeyString]
   );
 
-  const fetchFn = useCallback(async () => {
-    try {
-      const res = await queryFn();
-      setData(res);
-      setStatus('success');
-      setCacheStore(res);
-    } catch (err) {
-      setError(err as Error);
-      setStatus('error');
+  const initialize = () => {
+    setData(null);
+    setStatus('pending');
+    setError(null);
+  };
+
+  const setCacheStore = useCallback(
+    (
+      queryKey: string,
+      data: Query['data'],
+      queryFn: Query['queryFn'],
+      updatedAt: Query['updatedAt']
+    ) => {
+      cacheStore.set(queryKey, { data, queryFn, updatedAt });
+    },
+    []
+  );
+
+  const fetchFn = useCallback(
+    async (queryFn: Query['queryFn']) => {
+      try {
+        const res = (await queryFn()) as TData;
+        setCacheStore(queryKeyString, res, queryFn, Date.now());
+        setData(res);
+        setStatus('success');
+      } catch (err) {
+        setCacheStore(queryKeyString, null, queryFn, Date.now());
+        setData(null);
+        setError(err as Error);
+        setStatus('error');
+      }
+    },
+    [queryKeyString, setCacheStore]
+  );
+
+  const invalidateQueries = (queryKey: TQueryKey) => {
+    const queryKeyString = JSON.stringify(queryKey);
+    const cacehedQueryFn = cacheStore.get(queryKeyString)?.queryFn;
+    if (cacehedQueryFn) {
+      void fetchFn(cacehedQueryFn);
     }
-  }, [queryFn, setCacheStore]);
+  };
+
+  const isCached = cacheStore.has(queryKeyString);
+  const isStaled =
+    Date.now() - (cacheStore.get(queryKeyString)?.updatedAt || Date.now()) >
+    staleTime;
 
   useEffect(() => {
-    const now = Date.now();
-
-    const isCached = cacheStore.has(queryKeyString);
-    const isStaled =
-      now - (cacheStore.get(queryKeyString)?.updatedAt || now) > staleTime;
-
     if (isCached && !isStaled) {
       setData(cacheStore.get(queryKeyString)?.data as TData);
       setStatus('success');
     } else {
-      void fetchFn();
+      initialize();
+      void fetchFn(cachedQueryFn);
     }
-  }, [queryKeyString, fetchFn, staleTime]);
+  }, [queryKeyString, fetchFn, cachedQueryFn, staleTime]);
 
   return {
     data,
@@ -68,6 +98,7 @@ const useQuery = <TData>({
     isLoading: status === 'pending',
     isSuccess: status === 'success',
     isError: status === 'error',
+    invalidateQueries,
   };
 };
 

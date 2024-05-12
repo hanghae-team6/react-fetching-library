@@ -1,105 +1,154 @@
-import { render, screen } from '@testing-library/react';
 import { expect } from 'vitest';
+import { renderHook, act } from '@testing-library/react-hooks';
 import useQuery from '../hooks/useQuery';
-import { mockURL, mockResponse, ResponseType } from './mocks/handlers';
+import { mockResponse } from './mocks/handlers';
 
-const fetchFn = async (url: string) => {
-  const response = await fetch(url);
-  return (await response.json()) as ResponseType;
-};
+const mockFetchFn = vi.fn((queryKey: string) =>
+  Promise.resolve(mockResponse[queryKey])
+);
 
-describe('DataComponent', () => {
-  it('query', async () => {
-    const queryKey = 'test1';
-
-    function Page() {
-      const { data } = useQuery({
-        queryKey: [queryKey],
-        queryFn: () => fetchFn(mockURL[queryKey]),
-      });
-
-      return (
-        <div>
-          <h1>{data ? data.content : 'loading...'}</h1>
-        </div>
-      );
-    }
-    render(<Page />);
-
-    expect(screen.getByText('loading...')).toBeTruthy();
-    await screen.findByText(mockResponse[queryKey].content);
+describe('useQuery hook', () => {
+  beforeEach(() => {
+    mockFetchFn.mockClear();
   });
 
-  it('queries', async () => {
-    function Page() {
-      const { data: firstData } = useQuery({
-        queryKey: ['test2'],
-        queryFn: () => fetchFn(mockURL['test2']),
-        staleTime: 1000,
-      });
-      const { data: secondData } = useQuery({
-        queryKey: ['test3'],
-        queryFn: () => fetchFn(mockURL['test3']),
-        staleTime: 2000,
-      });
-
-      return (
-        <div>
-          <h1>{firstData ? firstData.content : 'loading...'}</h1>
-          <h1>{secondData ? secondData.content : 'loading...'}</h1>
-        </div>
-      );
-    }
-
-    render(<Page />);
-
-    await screen.findByText(mockResponse['test2'].content);
-    await screen.findByText(mockResponse['test3'].content);
-  });
-
-  it('status', async () => {
+  it('should handle a query', async () => {
     const queryKey = 'test1';
-    function Page() {
-      const { data, isLoading, isError, isSuccess } = useQuery({
+    const { result, waitFor } = renderHook(() =>
+      useQuery({
         queryKey: [queryKey],
-        queryFn: () => fetchFn(mockURL[queryKey]),
+        queryFn: () => mockFetchFn(queryKey),
         staleTime: 0,
-      });
+      })
+    );
 
-      return (
-        <div>
-          <h1>{isLoading ? 'loading' : data?.content}</h1>
-          <h1>{isError ? 'error' : ''}</h1>
-          <h1>{isSuccess ? 'success' : ''}</h1>
-        </div>
-      );
-    }
-    render(<Page />);
+    expect(result.current.data).toBeNull();
+    expect(result.current.isLoading).toBeTruthy();
 
-    expect(screen.getByText('loading')).toBeTruthy();
-    await screen.findByText(mockResponse[queryKey].content);
-    await screen.findByText('success');
+    await waitFor(() => expect(result.current.isLoading).toBeFalsy());
+
+    expect(result.current.data).toEqual(mockResponse[queryKey]);
   });
-  it('cached', async () => {
+
+  it('should handle queries', async () => {
+    const querykey1 = 'test2';
+    const querykey2 = 'test3';
+
+    const { result: result1, waitFor: waitFor1 } = renderHook(() =>
+      useQuery({
+        queryKey: [querykey1],
+        queryFn: () => mockFetchFn(querykey1),
+        staleTime: 0,
+      })
+    );
+    const { result: result2, waitFor: waitFor2 } = renderHook(() =>
+      useQuery({
+        queryKey: [querykey2],
+        queryFn: () => mockFetchFn(querykey2),
+        staleTime: 0,
+      })
+    );
+
+    expect(result1.current.data).toBeNull();
+    expect(result1.current.isLoading).toBeTruthy();
+
+    expect(result2.current.data).toBeNull();
+    expect(result2.current.isLoading).toBeTruthy();
+
+    await waitFor1(() => expect(result1.current.isLoading).toBeFalsy());
+    await waitFor2(() => expect(result2.current.isLoading).toBeFalsy());
+
+    expect(result1.current.data).toEqual(mockResponse[querykey1]);
+    expect(result2.current.data).toEqual(mockResponse[querykey2]);
+  });
+
+  it('should cache result', async () => {
     const queryKey = 'test1';
-    function Page() {
-      const { data, isLoading, isError, isSuccess } = useQuery({
+
+    renderHook(() =>
+      useQuery({
         queryKey: [queryKey],
-        queryFn: () => fetchFn(mockURL[queryKey]),
-        staleTime: 1000,
-      });
+        queryFn: () => mockFetchFn(queryKey),
+      })
+    );
 
-      return (
-        <div>
-          <h1>{isLoading ? 'loading' : data?.content}</h1>
-          <h1>{isError ? 'error' : ''}</h1>
-          <h1>{isSuccess ? 'success' : ''}</h1>
-        </div>
-      );
-    }
-    render(<Page />);
+    const { result: result2, waitFor } = renderHook(() =>
+      useQuery({
+        queryKey: [queryKey],
+        queryFn: () => mockFetchFn(queryKey),
+      })
+    );
 
-    await screen.findByText(mockResponse[queryKey].content);
-    await screen.findByText('success');
+    expect(result2.current.data).toEqual(mockResponse[queryKey]);
+    expect(result2.current.isLoading).toBeFalsy();
+
+    await waitFor(() => expect(mockFetchFn).toHaveBeenCalledTimes(0));
+  });
+
+  it('should invalidate cache', async () => {
+    const queryKey = 'test1';
+    const { result, waitFor } = renderHook(() =>
+      useQuery({
+        queryKey: [queryKey],
+        queryFn: () => mockFetchFn(queryKey),
+        staleTime: 0,
+      })
+    );
+
+    await waitFor(() => expect(mockFetchFn).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      void result.current.invalidateQueries([queryKey]);
+    });
+
+    await waitFor(() => expect(mockFetchFn).toHaveBeenCalledTimes(2));
+  });
+
+  it('should handle success status', async () => {
+    const queryKey = 'test1';
+    const { result, waitFor } = renderHook(() =>
+      useQuery({
+        queryKey: [queryKey],
+        queryFn: () => mockFetchFn(queryKey),
+        staleTime: 0,
+      })
+    );
+
+    expect(result.current.data).toBeNull();
+    expect(result.current.status).toBe('pending');
+    expect(result.current.isSuccess).toBeFalsy();
+    expect(result.current.isLoading).toBeTruthy();
+
+    await waitFor(() => expect(result.current.isLoading).toBeFalsy());
+
+    expect(result.current.data).toEqual(mockResponse[queryKey]);
+    expect(result.current.status).toBe('success');
+    expect(result.current.isSuccess).toBeTruthy();
+  });
+
+  it('should handle error status', async () => {
+    const error = new Error('Query Failed');
+    mockFetchFn.mockRejectedValueOnce(error);
+
+    const queryKey = 'test1';
+    const { result, waitFor } = renderHook(() =>
+      useQuery({
+        queryKey: [queryKey],
+        queryFn: () => mockFetchFn(queryKey),
+        staleTime: 0,
+      })
+    );
+
+    expect(result.current.data).toBeNull();
+    expect(result.current.status).toBe('pending');
+    expect(result.current.isError).toBeFalsy();
+    expect(result.current.isLoading).toBeTruthy();
+
+    await waitFor(() => expect(result.current.isLoading).toBeFalsy());
+
+    expect(result.current.data).toBeNull();
+    expect(result.current.status).toBe('error');
+    expect(result.current.isError).toBeTruthy();
+    expect(result.current.error).toEqual(error);
   });
 });
