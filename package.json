@@ -1,7 +1,7 @@
 {
   "name": "rfl-js",
   "private": false,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": "https://github.com/hanghae-team6/react-fetching-library",
   "main": "index.ts",
   "type": "module",
