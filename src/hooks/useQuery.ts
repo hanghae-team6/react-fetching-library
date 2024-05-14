@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from 'react';
+import { hashKey } from '../utils/utils';
 
 type TQueryKey = unknown[];
 type TStatus = 'pending' | 'error' | 'success';
@@ -27,7 +28,7 @@ const useQuery = <TData>({
   const [status, setStatus] = useState<TStatus>('pending');
   const [error, setError] = useState<Error | null>(null);
 
-  const queryKeyString = JSON.stringify(queryKey);
+  const queryKeyString = hashKey(queryKey);
   const cachedQueryFn = useCallback(
     cacheStore.get(queryKeyString)?.queryFn || queryFn,
     [queryFn, queryKeyString]
@@ -53,6 +54,7 @@ const useQuery = <TData>({
 
   const fetchFn = useCallback(
     async (queryFn: Query['queryFn']) => {
+      initialize();
       try {
         const res = (await queryFn()) as TData;
         setCacheStore(queryKeyString, res, queryFn, Date.now());
@@ -86,7 +88,6 @@ const useQuery = <TData>({
       setData(cacheStore.get(queryKeyString)?.data as TData);
       setStatus('success');
     } else {
-      initialize();
       void fetchFn(cachedQueryFn);
     }
   }, [queryKeyString, fetchFn, cachedQueryFn, staleTime]);

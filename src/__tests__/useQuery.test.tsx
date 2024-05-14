@@ -31,7 +31,7 @@ describe('useQuery hook', () => {
     mockFetchFn.mockClear();
   });
 
-  it('should handle a query', async () => {
+  it('should have a result value stored in the query key', async () => {
     const queryKey = 'test1';
     const { result, waitFor } = renderHook(() =>
       useQuery({
